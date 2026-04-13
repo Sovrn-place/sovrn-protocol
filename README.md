@@ -269,6 +269,22 @@ Adapters must be pure translation layers. They must not modify the credential sc
 
 ---
 
+## Governance
+
+Sovrn Protocol is currently maintained by [Sovrn](https://sovrn.place). Schema changes go through an RFC process - open an issue with the proposed change, its rationale, and a backwards compatibility analysis. Breaking changes require a major version bump.
+
+As adoption grows, governance will expand to include implementers, zones, and participating standards bodies.
+
+---
+
+## Security
+
+Security issues: email **contactus@sovrnplace.com**. Do not open public issues for security vulnerabilities.
+
+Responsible disclosure reports receive acknowledgement within 72 hours.
+
+---
+
 ## License
 
 Specifications, schemas, and interface definitions in this repository are licensed under [Apache 2.0](LICENSE).
