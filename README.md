@@ -8,17 +8,21 @@ Sovrn Protocol defines how identity credentials are issued, verified, and ported
 
 ## Scope
 
-This specification defines:
+Economic zones, free ports, and smart cities are the fastest-growing governance structures in the world - yet they have no shared identity infrastructure. A resident verified in one zone starts from scratch in another. A company incorporated in Lagos cannot present those credentials in Colombo. Every zone builds its own siloed onboarding, its own KYC, its own credential format.
 
-- A decentralized identifier method (`did:sovrn:`) and the `.si` namespace
-- W3C VC 2.0 credential schemas for zone-issued attestations
-- A provider-agnostic adapter interface for KYC and verification providers
-- A credential presentation format for cross-zone sharing
-- A cross-zone verification flow with explicit consent semantics
-- Alignment with existing and emerging identity standards
-- On-chain credential storage for tamper-evident verification
+Sovrn Protocol is the identity and credential layer that connects them.
 
-Compatible identity providers include Privado ID, Holonym / Human ID, zkPassport, Anon Aadhaar, Sumsub, Persona, and any other provider that implements the adapter interface.
+This specification defines how zones issue credentials, how residents carry them across borders, and how any identity provider - open or commercial - can plug into the network. A verification done once is recognized everywhere. A reputation built in one zone carries weight in the next.
+
+The protocol covers:
+
+- **`did:sovrn:` and the `.si` namespace** - a decentralized identifier method purpose-built for multi-zone identity
+- **Credential schemas (W3C VC 2.0)** - standardized formats for KYC verification, residency, incorporation, tax compliance, and payment history
+- **KycAdapter interface** - a provider-agnostic contract that any verification provider can implement
+- **Cross-zone credential presentation** - how credentials move between independent zones with explicit user consent
+- **On-chain credential storage** - SHA-256 hashes stored on-chain for tamper-evident verification without exposing personal data
+
+Compatible providers include Privado ID, Holonym, zkPassport, Anon Aadhaar, Sumsub, Persona, and any provider that implements the adapter interface.
 
 ---
 
