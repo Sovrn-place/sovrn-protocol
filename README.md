@@ -8,72 +8,30 @@ There is no existing standard for portable identity credentials across independe
 
 ---
 
-## What this is
+## How this repository is organized
 
-Sovrn Protocol is a specification. It defines:
+Sovrn Protocol has two layers:
 
-- **A universal identity anchor** - The `did:sovrn:` method and `.si` namespace that every credential, reputation score, and cross-zone presentation attaches to
-- **A credential schema** - A W3C VC 2.0 compliant data model for identity attestations issued by economic zones
-- **A reputation protocol** - An open schema for portable reputation scores that travel with a user across zones
-- **An adapter interface** - A TypeScript contract (`KycAdapter`) that any identity provider can implement to issue credentials in the Sovrn format
-- **A cross-zone verification protocol** - How credentials issued by Zone A are presented to and accepted by Zone B
-- **An intent state machine** - The application lifecycle every zone processes through Sovrn
-- **A ledger event schema** - An immutable audit trail format for every state change, payment, and credential issuance
-- **A federation onboarding spec** - What a zone provides to join the network
-- **An escrow protocol** - How payments are held, released, and split between zones and the network
-- **An on-chain anchoring layer** - SHA-256 hashes of every credential and ledger event, anchored on Base L2
+**The open protocol (Tier 1)** - Fully specified in this repository under Apache 2.0. Everything a developer or standards body needs to implement, verify, or integrate against: the `did:sovrn:` method, W3C VC 2.0 credential schemas, the `KycAdapter` interface, the credential presentation format, the cross-zone verification flow, standards alignment, and on-chain anchoring.
 
-Sovrn defines the standard. Identity providers implement it. Reference adapter implementations exist for both open verification tools (Privado ID, Holonym / Human ID, zkPassport, Anon Aadhaar) and licensed KYC providers (Sumsub, Persona). All produce identical credentials conforming to this specification.
+**The proprietary platform (Tier 2)** - Described here so implementers know what surrounds the open protocol, but not specified in this repository. Covers reputation, the intent lifecycle, the ledger and audit layer, escrow and settlement, federation onboarding, and AI-assisted review. Full specifications are available to zone partners under agreement.
 
-The protocol is database-backed for speed (Track 1) and on-chain anchored for trust (Track 2). Both layers exist in the reference architecture.
+> The open protocol handles **identity and credentials**. The proprietary platform handles **operations, payments, and intelligence**. Both are part of how Sovrn works. Only the first is open-source.
 
 ---
 
-## Quick example
+# Tier 1 - The Open Protocol
 
-A credential issued by a zone under this protocol:
+The seven sections below are the complete specification of the open Sovrn Protocol. They are licensed under Apache 2.0.
 
-```json
-{
-  "@context": ["https://www.w3.org/ns/credentials/v2"],
-  "type": ["VerifiableCredential", "SovrnIdentityCredential"],
-  "issuer": "did:sovrn:itana-ng",
-  "credentialSubject": {
-    "id": "did:sovrn:user-a3f8c1",
-    "type": "KYC_VERIFIED",
-    "level": 2,
-    "issuingZone": "itana-ng",
-    "hash": "sha256:a3f8c1e9b2d4..."
-  }
-}
-```
-
-The minimal adapter contract an identity provider implements:
-
-```typescript
-interface KycAdapter {
-  readonly providerId: string
-  readonly track: 'open' | 'licensed'
-  readonly maxTier: 1 | 2 | 3
-
-  startSession(params: SessionParams): Promise<SessionHandle>
-  getStatus(sessionId: string): Promise<SessionStatus>
-  handleWebhook(payload: unknown): Promise<AdapterResult>
-}
-```
-
-That's the protocol in 20 lines. Full specification below.
-
----
-
-## Specification
-
-### 1. Universal ID (.si Namespace)
+## 1. Universal ID and DID Method (`did:sovrn:`)
 
 The Universal ID is the identity anchor in Sovrn Protocol. Every credential, reputation score, and cross-zone presentation is tied to a `.si` identity.
 
-**Format:** `did:sovrn:{uuid}`
+**DID method:** `did:sovrn:`
 **Namespace:** `.si` (e.g., `alex.si`)
+**Format:** `did:sovrn:{uuid}`
+
 **Resolution:** `did:sovrn:{uuid}` resolves to the user's public identity anchor containing:
 
 - `.si` name
@@ -88,9 +46,9 @@ The `.si` identity sits **above** the KYC layer. Users claim a `.si` name first,
 - KYC credentials from multiple providers and zones all attach to the same `.si` anchor
 - Cross-zone portability works at the identity level, not the credential level - Zone B recognizes `alex.si`, not a specific Sumsub session
 
-The `.si` namespace is proprietary to Sovrn. The DID resolution method and identity anchor schema are part of this open protocol.
+The `.si` namespace is proprietary to Sovrn. The `did:sovrn:` resolution method and the identity anchor schema are part of this open protocol.
 
-**Example DID document:**
+**DID document example:**
 
 ```json
 {
@@ -114,76 +72,11 @@ The `.si` namespace is proprietary to Sovrn. The DID resolution method and ident
 }
 ```
 
-### 2. Reputation Protocol
-
-Reputation is portable across zones. It is computed from verifiable on-platform activity and attached to a `.si` identity. When a user presents credentials cross-zone, the reputation score travels with the presentation.
-
-**The scoring algorithm is proprietary. The output schema is open.** Any zone admin, regulator, or auditor reading a reputation score across the network reads the same fields in the same format.
-
-**Dimensions (each 0-20, total 0-100):**
-
-| Dimension | What it measures |
-|---|---|
-| `tenure` | Time holding a `.si` identity and active participation across zones |
-| `financial` | Payment history, escrow completion, refund rate |
-| `compliance` | KYC tier achieved, cross-check results, sanctions status |
-| `crossZone` | Breadth of credentials across distinct zones |
-| `engagement` | Application completion rate, document quality, responsiveness |
-
-**Tiers (from total score):**
-
-| Tier | Range |
-|---|---|
-| Explorer | 0-24 |
-| Pioneer | 25-49 |
-| Ambassador | 50-74 |
-| Sovereign | 75-100 |
-
-**Multi-zone bonus (added to total, capped):**
-
-| Distinct zones with credentials | Bonus |
-|---|---|
-| 2 | +5 |
-| 3 | +8 |
-| 4 | +9 |
-| 5 or more | +10 (cap) |
-
-**ReputationScore schema (what a zone receives during presentation):**
-
-```typescript
-interface ReputationScore {
-  /** Subject DID */
-  subject: string
-  /** Total score, 0-100 (after multi-zone bonus, capped) */
-  total: number
-  /** Tier derived from total */
-  tier: 'Explorer' | 'Pioneer' | 'Ambassador' | 'Sovereign'
-  /** Per-dimension breakdown */
-  dimensions: {
-    tenure: number
-    financial: number
-    compliance: number
-    crossZone: number
-    engagement: number
-  }
-  /** Number of distinct zones contributing credentials */
-  zoneCount: number
-  /** Multi-zone bonus applied */
-  multiZoneBonus: number
-  /** Last recomputation timestamp (ISO 8601) */
-  computedAt: string
-  /** SHA-256 hash of the canonicalized score payload */
-  hash: string
-}
-```
-
-Zones consume the score, not the raw signals behind it. A zone admin seeing `tier: 'Ambassador'` knows what that means across the network without needing access to payment history, KYC sessions, or prior applications.
-
-### 3. Credential Schema (W3C VC 2.0)
+## 2. W3C VC 2.0 Credential Schemas
 
 All credentials conform to the [W3C Verifiable Credentials Data Model 2.0](https://www.w3.org/TR/vc-data-model-2.0/).
 
-Required fields:
+**Required fields:**
 
 | Field | Description |
 |---|---|
@@ -198,7 +91,7 @@ Required fields:
 
 Every credential includes a SHA-256 hash computed from the canonicalized payload. This hash is the bridge between the database layer and the on-chain anchoring layer. The same hash is written to a Base L2 contract, making the credential tamper-evident without exposing any credential contents.
 
-### 4. Credential Types
+**Credential types:**
 
 | Type | Description | Tier |
 |---|---|---|
@@ -212,9 +105,35 @@ Every credential includes a SHA-256 hash computed from the canonicalized payload
 
 Tiered types (`KYC_*`) map to FATF-aligned verification depth. Non-tiered types represent zone-scoped attestations.
 
-### 5. KycAdapter Interface
+**Full credential example:**
 
-The `KycAdapter` is the integration contract. Any identity provider - open or licensed - implements this interface to issue credentials conforming to the Sovrn Protocol.
+```json
+{
+  "@context": ["https://www.w3.org/ns/credentials/v2"],
+  "type": ["VerifiableCredential", "SovrnIdentityCredential"],
+  "issuer": "did:sovrn:itana-ng",
+  "issuanceDate": "2026-03-14T09:12:00Z",
+  "expirationDate": "2028-03-14T09:12:00Z",
+  "credentialSubject": {
+    "id": "did:sovrn:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "type": "KYC_ENHANCED",
+    "level": 2,
+    "issuingZone": "itana-ng",
+    "hash": "sha256:a3f8c1e9b2d4..."
+  },
+  "proof": {
+    "type": "Ed25519Signature2020",
+    "created": "2026-03-14T09:12:00Z",
+    "verificationMethod": "did:sovrn:itana-ng#key-1",
+    "proofPurpose": "assertionMethod",
+    "proofValue": "z58..."
+  }
+}
+```
+
+## 3. KycAdapter Interface
+
+The `KycAdapter` is the integration contract. Any identity provider - open or licensed - implements this interface to issue credentials conforming to the Sovrn Protocol. Sovrn defines the standard; providers implement it.
 
 ```typescript
 interface KycAdapter {
@@ -259,104 +178,16 @@ interface KycAdapter {
 }
 ```
 
-An implementation is a pure translation layer: it takes provider-native outputs and emits Sovrn-compliant credentials. Sovrn's core never talks to any provider directly.
+An implementation is a pure translation layer. It takes provider-native outputs and emits Sovrn-compliant credentials. Sovrn's core never talks to any provider directly.
 
-### 6. Reference Implementations
+**Reference implementations** exist in both tracks:
 
-The protocol is provider-agnostic. Reference adapters exist for:
-
-**Open track** - adapters that wrap open or decentralized verification tools:
-
-- Privado ID (zero-knowledge proofs)
-- Holonym / Human ID (humanity verification)
-- zkPassport (passport ZK proofs)
-- Anon Aadhaar (Indian identity, ZK)
-
-**Licensed track** - adapters that wrap regulated KYC providers:
-
-- Sumsub
-- Persona
+- **Open track** - Privado ID, Holonym / Human ID, zkPassport, Anon Aadhaar
+- **Licensed track** - Sumsub, Persona
 
 All adapters emit credentials indistinguishable at the protocol layer. A credential issued via Privado ID and a credential issued via Sumsub are the same shape, carry the same hash format, and verify identically in any Sovrn-compliant zone.
 
-### 7. Federation Configuration
-
-Each zone configures its verification policy:
-
-```typescript
-interface FederationKycConfig {
-  /** Minimum KYC tier for basic access */
-  minTier: 1 | 2 | 3
-  /** Accept cross-zone credentials? */
-  acceptsCrossZone: boolean
-  /** Which zones' credentials are accepted */
-  acceptedZones: string[] | ['*']
-  /** Checks that must always be done locally */
-  mandatoryLocalChecks: string[]
-}
-```
-
-This lets a zone accept credentials from some peers, require fresh verification from others, and preserve non-waivable local checks (e.g. domestic sanctions screening) regardless of presented credentials.
-
-### 8. Federation Onboarding
-
-To join the Sovrn network, a zone provides a complete `FederationConfig`. This is the "how to become a Sovrn zone" specification - it captures everything a zone declares about itself, its regulatory stance, its payment setup, and its administrative policies.
-
-```typescript
-interface FederationConfig {
-  /** Zone identity */
-  zoneId: string                    // e.g. 'itana-ng'
-  zoneName: string                  // e.g. 'Itana Digital Free Zone'
-  country: string                   // ISO 3166-1 alpha-2
-  regulator: string                 // Name of the regulatory authority
-  legalFramework: string            // Reference to the enabling statute or SEZ act
-  did: string                       // did:sovrn:{zoneId}
-  publicKey: string                 // multibase-encoded zone signing key
-
-  /** KYC policy (see FederationKycConfig above) */
-  kyc: FederationKycConfig
-
-  /** Payment policy */
-  payment: {
-    providers: Array<'stripe' | 'paystack' | 'flutterwave' | 'circle' | string>
-    currencies: string[]            // ISO 4217 + 'USDC'
-    feeSplit: {
-      zone: number                  // 0.85 typical
-      network: number               // 0.15 typical
-    }
-    escrowTimeoutDays: number       // auto-refund threshold
-  }
-
-  /** Services offered by this zone */
-  services: Array<
-    | 'RESIDENCY'
-    | 'BUSINESS_INCORPORATION'
-    | 'TAX_FILING'
-    | 'BANKING'
-    | 'REAL_ESTATE'
-    | 'EVENT_ACCESS'
-  >
-
-  /** Admin policy */
-  admin: {
-    reviewMode: 'manual' | 'ai_assisted' | 'auto'
-    autoAdvanceThreshold: number    // AI confidence score (0-1) for auto-advance
-    aiProvider: 'gemini-flash' | 'claude' | 'none'
-  }
-
-  /** Reputation policy */
-  reputation: {
-    /** Minimum reputation tier accepted for cross-zone credentials */
-    minTierAccepted: 'Explorer' | 'Pioneer' | 'Ambassador' | 'Sovereign'
-    /** Whether this zone contributes to reputation computation */
-    contributes: boolean
-  }
-}
-```
-
-A zone joining the network submits this configuration to Sovrn. Once accepted, the zone's DID is registered in the federation registry and it can begin issuing credentials and receiving cross-zone presentations.
-
-### 9. Credential Presentation Format
+## 4. Credential Presentation Format
 
 When a user presents credentials from Zone A to Zone B, the exact payload handed to Zone B's verifier is defined by this schema. Nothing not listed in the payload may be transmitted.
 
@@ -364,6 +195,7 @@ When a user presents credentials from Zone A to Zone B, the exact payload handed
 interface CredentialPresentation {
   /** Subject's DID */
   subject: string                   // did:sovrn:{uuid}
+
   /** Credentials included in this presentation */
   credentials: Array<{
     type: SovrnCredentialType
@@ -373,8 +205,16 @@ interface CredentialPresentation {
     expiresAt?: string              // ISO 8601
     hash: string                    // sha256:...
   }>
+
   /** Attached reputation (if consented) */
-  reputation?: ReputationScore
+  reputation?: {
+    total: number                   // 0-100
+    tier: 'Explorer' | 'Pioneer' | 'Ambassador' | 'Sovereign'
+    zoneCount: number
+    computedAt: string
+    hash: string
+  }
+
   /** Consent metadata */
   consent: {
     /** What fields the user authorized sharing */
@@ -386,8 +226,10 @@ interface CredentialPresentation {
     /** SHA-256 hash of the canonicalized consent record */
     consentHash: string
   }
+
   /** Presenting zone (typically the user's home zone) */
   presentingZone: string
+
   /** Receiving zone */
   receivingZone: string
 }
@@ -396,7 +238,7 @@ interface CredentialPresentation {
 **What is included:**
 
 - Credential type, level, issuing zone, issue date, expiry, hash
-- Reputation score and tier (only if the user authorized sharing)
+- Reputation tier and score (only if the user authorized sharing)
 - Consent metadata: authorized fields, timestamp, consent hash
 - Presenting and receiving zone identifiers
 
@@ -408,150 +250,37 @@ interface CredentialPresentation {
 - Non-consented credentials
 - Any field not explicitly authorized in `consent.authorizedFields`
 
-A `CredentialPresentation` is a signed envelope. Zone B verifies the issuing zone's signature on each credential against the federation registry. Zone B records the presentation as a `CredentialPresentation` ledger event (see section 12) and may then resolve it into one of the three verification paths in section 10.
+A `CredentialPresentation` is a signed envelope. The receiving zone verifies the issuing zone's signature on each credential against the federation registry before acting on it.
 
-### 10. Cross-Zone Verification Flow
+## 5. Cross-Zone Verification Flow
 
 When a user presents credentials from Zone A to Zone B:
 
-1. The user consents to sharing specific credentials (section 9)
-2. Zone B receives a `CredentialPresentation` payload as defined above
-3. Zone B's admin resolves the presentation against one of three paths:
-   - **Accept** - skip re-verification, create a `CredentialPresentation` ledger event with consent metadata
-   - **Delta** - accept the base credential, request only additional checks not covered by the original
-   - **Fresh** - reject the presentation and require a new verification (e.g. when zone policy requires it regardless of prior credentials)
+1. **Consent** - The user explicitly authorizes sharing a specific subset of credentials. The authorization is recorded with a SHA-256 `consentHash`. No field is transmitted without being listed in `consent.authorizedFields`.
+2. **Delivery** - Zone B receives a `CredentialPresentation` payload (section 4). Signatures are verified against the federation registry.
+3. **Resolution** - Zone B's verifier resolves the presentation against one of three paths:
+   - **Accept** - Skip re-verification. Record the presentation with consent metadata.
+   - **Delta** - Accept the base credential, request only additional checks not covered by the original.
+   - **Fresh** - Reject the presentation and require a new verification (e.g. when zone policy requires it regardless of prior credentials).
 
-**What crosses zones:** Attestations, reputation scores, compliance status, credential hashes, consent records
-**What never crosses:** Original documents, raw PII, KYC session details, provider internals
+**What crosses zones:**
+
+- Attestations (credential type, level, issuing zone, dates, hash)
+- Reputation scores and tiers (only if consented)
+- Compliance status
+- Consent records
+
+**What never crosses zones:**
+
+- Original documents
+- Raw PII
+- KYC session details
+- Provider internals
+- Any non-consented field
 
 The protocol is explicit about what is and is not portable. Raw personal data stays with the original issuer and its KYC provider.
 
-### 11. Intent State Machine
-
-An **Intent** is the protocol term for an application a user submits to a zone - residency, business incorporation, tax filing, any service the zone offers. Every zone processes applications through Sovrn using the same state machine. This is the "operating system" layer for zone operations.
-
-**States:**
-
-```
-DRAFT              User is filling out the application
-SUBMITTED          User has submitted for review
-AI_REVIEW          Application under AI-assisted screening
-IDENTITY_VERIFIED  KYC credentials attached and verified
-PENDING_AUTHORITY  Awaiting human review from the zone authority
-APPROVED           Authority has approved, awaiting activation
-ACTIVE             Application is active (e.g. residency granted)
-REJECTED           Rejected at any review stage
-CANCELLED          User cancelled
-EXPIRED            Timed out without resolution
-```
-
-**Transitions:**
-
-```
-DRAFT             -> SUBMITTED          (user action)
-SUBMITTED         -> AI_REVIEW          (auto; gate: payment escrowed)
-AI_REVIEW         -> IDENTITY_VERIFIED  (auto; gate: KYC credentials present)
-AI_REVIEW         -> REJECTED           (auto; gate: AI screening failed)
-IDENTITY_VERIFIED -> PENDING_AUTHORITY  (auto; gate: zone review required)
-IDENTITY_VERIFIED -> APPROVED           (auto; gate: AI confidence >= threshold)
-PENDING_AUTHORITY -> APPROVED           (authority action)
-PENDING_AUTHORITY -> REJECTED           (authority action)
-APPROVED          -> ACTIVE             (auto; gate: instrument issued)
-SUBMITTED         -> CANCELLED          (user action)
-*                 -> EXPIRED            (auto; gate: zone timeout reached)
-```
-
-**Gate checks** run before each automatic transition. If a gate fails, the intent stays in its current state and the failure is recorded. Gates include: payment escrow verified, credentials attached at required tier, mandatory local checks passed, AI confidence above threshold, zone policy satisfied.
-
-**LedgerEvent emitted on every transition** (see section 12). The event records the from-state, to-state, actor, gate results, and a SHA-256 hash of the transition payload. This makes the application lifecycle a tamper-evident sequence.
-
-### 12. Ledger Event Schema
-
-Every significant action in the protocol creates a `LedgerEvent`. The ledger is the immutable audit trail. Zones, regulators, and auditors all read the same format.
-
-```typescript
-interface LedgerEvent {
-  /** Unique event identifier (ULID) */
-  id: string
-  /** Event type - narrow, specific */
-  type: string                      // e.g. 'INTENT_APPROVED', 'PAYMENT_ESCROWED'
-  /** Broad category for indexing */
-  category: 'IDENTITY' | 'PAYMENT' | 'INTENT' | 'CREDENTIAL' | 'REPUTATION'
-  /** Entity the event is about */
-  entityId: string
-  entityType: 'User' | 'Intent' | 'Payment' | 'Credential' | 'Zone'
-  /** Actor that triggered the event */
-  actorId: string                   // did:sovrn:{uuid}
-  actorType: 'User' | 'Zone' | 'System'
-  /** Zone context (if applicable) */
-  zoneId?: string
-  /** Payload snapshot - type-specific */
-  metadata: Record<string, unknown>
-  /** ISO 8601 timestamp */
-  timestamp: string
-  /** SHA-256 hash over the canonicalized event */
-  hash: string
-  /** Previous event hash in the entity's chain (hash chain) */
-  prevHash?: string
-}
-```
-
-**Categories:**
-
-- `IDENTITY` - Universal ID claim, level upgrades, credential attach/detach
-- `PAYMENT` - Escrow, release, refund, fee split
-- `INTENT` - State transitions in the intent state machine
-- `CREDENTIAL` - Issuance, presentation, revocation
-- `REPUTATION` - Score recomputation, tier changes
-
-Events are append-only. Nothing is ever deleted or modified. Each event hash incorporates the previous event's hash for the same entity, forming a tamper-evident chain. The terminal hash of a chain is what gets anchored on Base L2 in Track 2.
-
-A zone's full history, a user's full identity journey, and a payment's full lifecycle are all reconstructible from the ledger alone.
-
-### 13. Payment Escrow Protocol
-
-Payments in Sovrn are held in escrow between submission and service delivery. The escrow protocol defines the lifecycle, the release conditions, and the fee split between the zone and the network.
-
-**States:**
-
-```
-PENDING      User has initiated payment, not yet confirmed
-IN_ESCROW    Payment confirmed and held pending service delivery
-SETTLED      Released: 85% to zone, 15% to network
-REFUNDED     Returned to user (rejection or timeout)
-FAILED       Payment failed before reaching escrow
-```
-
-**Transitions:**
-
-```
-PENDING    -> IN_ESCROW  (provider confirms capture)
-PENDING    -> FAILED     (provider rejects)
-IN_ESCROW  -> SETTLED    (intent transitions to APPROVED)
-IN_ESCROW  -> REFUNDED   (intent transitions to REJECTED or CANCELLED)
-IN_ESCROW  -> REFUNDED   (zone escrow timeout reached - auto-refund)
-```
-
-**Default fee split:** 85% zone, 15% network. Zones may negotiate alternative splits via the `FederationConfig.payment.feeSplit` field.
-
-**Escrow timeout:** Each zone declares `escrowTimeoutDays` in its federation config. If an intent does not resolve to `APPROVED` or `REJECTED` within the window, the payment auto-refunds and the intent transitions to `EXPIRED`.
-
-**LedgerEvent on every transition.** Every escrow state change emits a `PAYMENT` category ledger event with the amount, currency, provider, and fee split recorded.
-
-The escrow protocol is payment-provider-agnostic. The reference implementation supports Stripe, Paystack, Flutterwave, and Circle (USDC). Any provider that can hold and release funds on webhook can be wired in.
-
-### 14. On-Chain Anchoring
-
-Every credential's SHA-256 hash, every ledger event's SHA-256 hash, and every reputation score's SHA-256 hash is written to a contract on Base L2. This creates a tamper-evident verification layer without exposing any underlying data.
-
-- **Track 1 (database-backed)** - Credential, ledger, and reputation storage happen in a standard relational database for speed. Suitable for immediate verification in the issuing zone.
-- **Track 2 (on-chain anchored)** - The hash is mirrored to a Base L2 contract. Any verifier can independently check that a presented credential, a claimed ledger chain, or a reported reputation score matches its on-chain hash. Forgery, retroactive alteration, or log tampering becomes detectable without a trusted database.
-
-Both layers exist in the reference architecture. Verification works against Track 1 alone; Track 2 provides cross-zone and cross-time trust.
-
----
-
-## Standards alignment
+## 6. Standards Alignment
 
 Sovrn Protocol is designed to be interoperable with existing and emerging identity standards.
 
@@ -564,43 +293,90 @@ Sovrn Protocol is designed to be interoperable with existing and emerging identi
 | EUDI Wallet | Target compatibility by Dec 2026 |
 | FATF Recommendations | AML/CFT compliance framing for tiered verification |
 
+An OID4VCI / OID4VP profile for Sovrn credentials is a 2026 target. EUDI Wallet compatibility is a December 2026 target.
+
+## 7. On-Chain Anchoring
+
+Every credential's SHA-256 hash is written to a contract on Base L2. This creates a tamper-evident verification layer without exposing any credential contents.
+
+- **Track 1 (database-backed)** - Credential storage and lookup happen in a standard relational database for speed. Suitable for immediate verification in the issuing zone.
+- **Track 2 (on-chain anchored)** - The credential hash is mirrored to a Base L2 contract. Any verifier can independently check that a presented credential matches the on-chain hash, making forgery or retroactive alteration detectable without a trusted database.
+
+**What is anchored:** Credential hashes (section 2), the terminal hashes of ledger event chains (see Tier 2, Ledger & Audit Layer), and reputation score hashes (see Tier 2, Reputation Protocol).
+
+**What is not anchored:** Raw credentials, PII, application contents, or any field that would compromise privacy if exposed on-chain. Only hashes.
+
+Both layers exist in the reference architecture. Verification works against Track 1 alone; Track 2 provides cross-zone and cross-time trust.
+
 ---
 
-## Status
+# Tier 2 - Additional Protocol Layers
 
-| Component | Status |
-|---|---|
-| Universal ID (.si namespace, did:sovrn method) | Defined |
-| W3C VC 2.0 credential schema | Defined |
-| Reputation schema and tier model | Defined |
-| KycAdapter interface | Defined |
-| Federation config and onboarding schema | Defined |
-| Credential presentation format | Defined |
-| Cross-zone verification protocol | Defined |
-| Intent state machine | Defined |
-| Ledger event schema | Defined |
-| Escrow protocol | Defined |
-| SHA-256 hash on every credential, event, and score | Defined |
-| Sumsub reference adapter | Implemented |
-| Persona reference adapter | Implemented |
-| Open-track reference adapters (Privado, Holonym, zkPassport, Anon Aadhaar) | Specified, not yet open-sourced |
-| On-chain anchoring (Base L2 contract) | Specified (Track 2) |
-| EUDI Wallet compatibility | Target Dec 2026 |
-| OID4VCI / OID4VP profile | Target 2026 |
+Sovrn Protocol does not stop at credentials. The proprietary platform that implements the open protocol also runs the operational, financial, and intelligence layers that zones need to actually process applications, settle payments, and hold regulators accountable.
+
+These layers are described below so implementers and integrators understand what surrounds the open protocol. **Full specifications are available to zone partners, implementers, and standards bodies under agreement.** Contact **contactus@sovrnplace.com**.
+
+The open protocol handles identity and credentials. The proprietary platform handles operations, payments, and intelligence.
+
+## 8. Reputation Protocol
+
+Sovrn computes a portable reputation score for every identity, derived from verifiable on-platform activity across five dimensions: **tenure**, **financial**, **compliance**, **cross-zone**, and **engagement**. Each dimension scores 0-20 for a total of 0-100, placing the identity in one of four tiers: **Explorer** (0-24), **Pioneer** (25-49), **Ambassador** (50-74), or **Sovereign** (75-100). A multi-zone bonus (up to +10) rewards credentials spanning multiple zones.
+
+The output schema that zones receive is fully defined in the Credential Presentation Format above (section 4, `reputation` field). **The scoring methodology is proprietary. The output schema is open** - any zone, regulator, or auditor reading a reputation score across the network reads the same fields in the same format.
+
+Full scoring specification available under zone partnership.
+
+## 9. Intent Lifecycle
+
+An **Intent** is the platform term for an application a user submits to a zone - residency, business incorporation, tax filing, any service the zone offers. Every zone processes applications through a shared state machine: `DRAFT` -> `SUBMITTED` -> `AI_REVIEW` -> `IDENTITY_VERIFIED` -> `PENDING_AUTHORITY` -> `APPROVED` -> `ACTIVE`, with terminal `REJECTED`, `CANCELLED`, and `EXPIRED` states.
+
+Each transition runs **gate checks** (payment escrowed, KYC credentials at required tier, mandatory local checks passed, AI confidence threshold met) and emits a ledger event. This gives every application a tamper-evident lifecycle.
+
+Full intent state machine specification, gate definitions, and transition rules available under zone partnership.
+
+## 10. Ledger and Audit Layer
+
+Every significant action in the platform creates a `LedgerEvent`: identity changes, credential issuances, intent transitions, payments, reputation recomputations. Events are append-only, each carrying a SHA-256 hash over its canonicalized payload. Hashes form a chain per entity - every event references the previous event's hash - making the log tamper-evident without a trusted database.
+
+Terminal chain hashes are anchored on Base L2 (see section 7). This gives zones, regulators, and auditors an independently verifiable audit trail.
+
+Full ledger event schema, category taxonomy, and hash chain specification available under partnership.
+
+## 11. Escrow and Settlement
+
+Payments to zones are held in programmable escrow between submission and service delivery. The escrow protocol supports multiple payment rails (Stripe, Paystack, Flutterwave, Circle / USDC) and automates release, refund, and fee splits. Escrow states follow a defined lifecycle (`PENDING` -> `IN_ESCROW` -> `SETTLED` / `REFUNDED`) with release driven by intent resolution and refunds triggered by rejection, cancellation, or timeout.
+
+The default fee split is 85 percent to the zone, 15 percent to the network. Zones may negotiate alternative terms.
+
+Commercial terms and the full escrow specification are covered by zone agreement. Contact **contactus@sovrnplace.com**.
+
+## 12. Federation Onboarding
+
+Zones joining the Sovrn network provide a federation configuration covering zone identity, KYC policy (minimum tier, cross-zone acceptance, mandatory local checks), payment setup (providers, currencies, fee split), services offered, administrative policy (review mode, AI assistance, thresholds), and reputation policy. Once accepted, the zone's DID is registered in the federation registry and it can issue credentials and receive cross-zone presentations.
+
+**The full onboarding specification is available for prospective zone partners.** Contact **contactus@sovrnplace.com**.
+
+## 13. AI-Assisted Review
+
+Sovrn provides AI-assisted application screening that runs automated compliance assessment and surfaces applications above a confidence threshold for auto-advance, while routing borderline and high-risk applications to human authority review. The system is explicitly **human-in-the-loop for rejections** - no application is automatically rejected without a human decision.
+
+The review layer handles document quality checks, sanctions screening interpretation, consistency scoring, and per-zone policy enforcement.
+
+Architecture details, model selection, and prompt contracts are available under NDA.
 
 ---
 
 ## Repository structure
 
 ```
-/schemas       W3C VC 2.0 credential JSON-LD schemas, reputation schema, ledger event schema
-/adapters      KycAdapter interface + reference implementations
-/protocol      Cross-zone verification, intent state machine, escrow, federation onboarding specs
-/examples      Example credentials, presentations, ledger chains, adapter implementations
-/docs          Full specification documents
+/schemas       W3C VC 2.0 credential JSON-LD schemas (Tier 1)
+/adapters      KycAdapter interface + reference implementations (Tier 1)
+/protocol      Cross-zone verification protocol specification (Tier 1)
+/examples      Example credentials, presentations, adapter implementations
+/docs          Full specification documents (Tier 1 only)
 ```
 
-Directories will be populated as components are extracted from the reference implementation and published here.
+Directories will be populated as Tier 1 components are extracted from the reference implementation and published here.
 
 ---
 
@@ -620,7 +396,7 @@ Adapters must be pure translation layers. They must not modify the credential sc
 
 ## Governance
 
-Sovrn Protocol is currently maintained by [Sovrn](https://sovrn.place). Schema changes go through an RFC process - open an issue with the proposed change, its rationale, and a backwards compatibility analysis. Breaking changes require a major version bump.
+Sovrn Protocol is currently maintained by [Sovrn](https://sovrn.place). Schema changes to Tier 1 go through an RFC process - open an issue with the proposed change, its rationale, and a backwards compatibility analysis. Breaking changes require a major version bump.
 
 As adoption grows, governance will expand to include implementers, zones, and participating standards bodies.
 
@@ -636,7 +412,9 @@ Responsible disclosure reports receive acknowledgement within 72 hours.
 
 ## License
 
-Specifications, schemas, and interface definitions in this repository are licensed under [Apache 2.0](LICENSE).
+**Tier 1 only.** The specifications, schemas, and interface definitions for the seven Tier 1 sections of this document are licensed under [Apache 2.0](LICENSE).
+
+**Tier 2 is described, not licensed.** The additional protocol layers (reputation, intent lifecycle, ledger and audit, escrow and settlement, federation onboarding, AI-assisted review) are part of the proprietary Sovrn platform. Their descriptions in this README are informational. Full specifications and implementation details are available to zone partners and qualified implementers under agreement.
 
 ---
 
@@ -650,3 +428,5 @@ Sovrn Protocol is maintained by [Sovrn](https://sovrn.place). If you are:
 - Researching cross-border credential portability
 
 Open an issue or reach out. This is a first attempt at a standard that does not yet exist. Feedback from implementers, zones, and standards bodies shapes what it becomes.
+
+For zone partnerships, full Tier 2 specifications, or commercial questions: **contactus@sovrnplace.com**.
