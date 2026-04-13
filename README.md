@@ -1,5 +1,7 @@
 # Sovrn Protocol
 
+**Status:** Draft · **Version:** 0.1
+
 An open specification for portable identity credentials across independent economic zones.
 
 Sovrn Protocol defines how identity credentials are issued, verified, and ported across special economic zones, free ports, and smart cities. A KYC verification completed in one zone can be recognized by another zone without re-verification, while preserving user consent, privacy, and regulatory sovereignty.
@@ -32,7 +34,9 @@ The Universal ID is the identity anchor in Sovrn Protocol. Every credential, rep
 
 **DID method:** `did:sovrn:`
 **Namespace:** `.si` (e.g., `alex.si`)
-**Format:** `did:sovrn:{uuid}`
+**Format:** `did:sovrn:{uuid}` where `method-specific-id` is a lowercase, hyphenated UUIDv4
+
+> The `.si` namespace is internal to Sovrn for identity resolution. It is not affiliated with the `.si` country-code TLD (Slovenia) and does not resolve in DNS.
 
 A `did:sovrn:{uuid}` resolves to the subject's public identity anchor containing:
 
@@ -87,6 +91,8 @@ All credentials conform to the [W3C Verifiable Credentials Data Model 2.0](https
 | `credentialSubject.issuingZone` | Zone code of the issuer |
 | `credentialSubject.hash` | SHA-256 hash of the canonicalized credential payload |
 
+**Canonicalization:** JCS (RFC 8785).
+
 Every credential carries a SHA-256 hash over its canonicalized payload. This hash is the verification anchor for both database-stored and on-chain-stored credentials.
 
 **Credential types:**
@@ -107,11 +113,14 @@ Tiered types (`KYC_*`) map to FATF-aligned verification depth. Non-tiered types 
 
 ```json
 {
-  "@context": ["https://www.w3.org/ns/credentials/v2"],
+  "@context": [
+    "https://www.w3.org/ns/credentials/v2",
+    "https://sovrn.place/ns/identity/v1"
+  ],
   "type": ["VerifiableCredential", "SovrnIdentityCredential"],
   "issuer": "did:sovrn:itana-ng",
-  "issuanceDate": "2026-03-14T09:12:00Z",
-  "expirationDate": "2028-03-14T09:12:00Z",
+  "validFrom": "2026-03-14T09:12:00Z",
+  "validUntil": "2028-03-14T09:12:00Z",
   "credentialSubject": {
     "id": "did:sovrn:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "type": "KYC_ENHANCED",
@@ -128,6 +137,8 @@ Tiered types (`KYC_*`) map to FATF-aligned verification depth. Non-tiered types 
   }
 }
 ```
+
+> The `https://sovrn.place/ns/identity/v1` context document is forthcoming.
 
 ---
 
@@ -285,14 +296,15 @@ The reputation object embedded in a `CredentialPresentation` (section 4, `reputa
 
 Sovrn Protocol is designed to interoperate with existing and emerging identity standards.
 
-| Standard | Role |
-|---|---|
-| [W3C VC 2.0](https://www.w3.org/TR/vc-data-model-2.0/) | Credential data model |
-| [OID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) | Credential issuance |
-| [OID4VP](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) | Credential presentation |
-| [ISO 18013-5 (mdoc)](https://www.iso.org/standard/69084.html) | Mobile document format |
-| EUDI Wallet | Compatibility targeted for December 2026 |
-| FATF Recommendations | Framing for tiered KYC depth |
+| Standard | Role | Status |
+|---|---|---|
+| [W3C VC 2.0](https://www.w3.org/TR/vc-data-model-2.0/) | Credential data model | Implemented |
+| SHA-256 over JCS (RFC 8785) | Credential canonicalization and hashing | Implemented |
+| [OID4VCI 1.0](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) | Credential issuance | Planned |
+| [OID4VP 1.0](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) | Credential presentation | Planned |
+| [ISO 18013-5 (mdoc)](https://www.iso.org/standard/69084.html) | Mobile document format | Planned |
+| EUDI Wallet | Compatibility targeted for December 2026 | Planned |
+| FATF Recommendations | Framing for tiered KYC depth | Implemented |
 
 An OID4VCI / OID4VP profile for Sovrn credentials is planned for 2026.
 
@@ -314,7 +326,7 @@ Any verifier will be able to independently check that a presented credential mat
 
 ```
 /schemas       W3C VC 2.0 credential JSON-LD schemas
-/adapters      KycAdapter interface and reference implementations
+/adapters      KycAdapter interface and planned reference implementations
 /protocol      Cross-zone verification and presentation specifications
 /examples      Example credentials, presentations, and adapter implementations
 /docs          Full specification documents
