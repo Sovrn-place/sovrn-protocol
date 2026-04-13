@@ -62,7 +62,53 @@ That's the protocol in 20 lines. Full specification below.
 
 ## Specification
 
-### 1. Credential Schema (W3C VC 2.0)
+### 1. Universal ID (.si Namespace)
+
+The Universal ID is the identity anchor in Sovrn Protocol. Every credential, reputation score, and cross-zone presentation is tied to a `.si` identity.
+
+**Format:** `did:sovrn:{uuid}`
+**Namespace:** `.si` (e.g., `alex.si`)
+**Resolution:** `did:sovrn:{uuid}` resolves to the user's public identity anchor containing:
+
+- `.si` name
+- Identity level (`LIGHT` → `UNIVERSAL_ID` → `VERIFIED`)
+- Active credentials (types and issuing zones, never raw data)
+- Reputation score and tier
+- SHA-256 identity hash
+
+The `.si` identity sits **above** the KYC layer. Users claim a `.si` name first, then KYC credentials attach to that identity when triggered by actions. This separation means:
+
+- A user can hold a `.si` identity without any KYC (`UNIVERSAL_ID` level)
+- KYC credentials from multiple providers and zones all attach to the same `.si` anchor
+- Cross-zone portability works at the identity level, not the credential level - Zone B recognizes `alex.si`, not a specific Sumsub session
+
+The `.si` namespace is proprietary to Sovrn. The DID resolution method and identity anchor schema are part of this open protocol.
+
+**Example DID document:**
+
+```json
+{
+  "@context": ["https://www.w3.org/ns/did/v1", "https://sovrn.place/ns/identity/v1"],
+  "id": "did:sovrn:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "authentication": [{
+    "type": "Ed25519VerificationKey2020",
+    "publicKeyMultibase": "z6Mkf5..."
+  }],
+  "service": [{
+    "type": "SovrnIdentityAnchor",
+    "serviceEndpoint": "https://sovrn.place/api/identity/resolve/alex.si"
+  }],
+  "sovrnMetadata": {
+    "siName": "alex.si",
+    "level": "VERIFIED",
+    "credentialCount": 3,
+    "reputationTier": "Pioneer",
+    "identityHash": "sha256:a3f8c1..."
+  }
+}
+```
+
+### 2. Credential Schema (W3C VC 2.0)
 
 All credentials conform to the [W3C Verifiable Credentials Data Model 2.0](https://www.w3.org/TR/vc-data-model-2.0/).
 
@@ -81,7 +127,7 @@ Required fields:
 
 Every credential includes a SHA-256 hash computed from the canonicalized payload. This hash is the bridge between the database layer and the on-chain anchoring layer. The same hash is written to a Base L2 contract, making the credential tamper-evident without exposing any credential contents.
 
-### 2. Credential Types
+### 3. Credential Types
 
 | Type | Description | Tier |
 |---|---|---|
@@ -95,7 +141,7 @@ Every credential includes a SHA-256 hash computed from the canonicalized payload
 
 Tiered types (`KYC_*`) map to FATF-aligned verification depth. Non-tiered types represent zone-scoped attestations.
 
-### 3. KycAdapter Interface
+### 4. KycAdapter Interface
 
 The `KycAdapter` is the integration contract. Any identity provider - open or licensed - implements this interface to issue credentials conforming to the Sovrn Protocol.
 
@@ -144,7 +190,7 @@ interface KycAdapter {
 
 An implementation is a pure translation layer: it takes provider-native outputs and emits Sovrn-compliant credentials. Sovrn's core never talks to any provider directly.
 
-### 4. Reference Implementations
+### 5. Reference Implementations
 
 The protocol is provider-agnostic. Reference adapters exist for:
 
@@ -162,7 +208,7 @@ The protocol is provider-agnostic. Reference adapters exist for:
 
 All adapters emit credentials indistinguishable at the protocol layer. A credential issued via Privado ID and a credential issued via Sumsub are the same shape, carry the same hash format, and verify identically in any Sovrn-compliant zone.
 
-### 5. Federation Configuration
+### 6. Federation Configuration
 
 Each zone configures its verification policy:
 
@@ -181,7 +227,7 @@ interface FederationKycConfig {
 
 This lets a zone accept credentials from some peers, require fresh verification from others, and preserve non-waivable local checks (e.g. domestic sanctions screening) regardless of presented credentials.
 
-### 6. Cross-Zone Verification Flow
+### 7. Cross-Zone Verification Flow
 
 When a user presents credentials from Zone A to Zone B:
 
@@ -197,7 +243,7 @@ When a user presents credentials from Zone A to Zone B:
 
 The protocol is explicit about what is and is not portable. Raw personal data stays with the original issuer and its KYC provider.
 
-### 7. On-Chain Anchoring
+### 8. On-Chain Anchoring
 
 Every credential's SHA-256 hash is written to a contract on Base L2. This creates a tamper-evident verification layer without exposing any credential contents.
 
