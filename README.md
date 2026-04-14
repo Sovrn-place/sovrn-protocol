@@ -53,6 +53,7 @@ Security issues: email **contactus@sovrnplace.com**. Do not open public issues f
 
 ## Platform
 
+**Demo:** [Link](https://sovrn-demo.vercel.app) — access password, message @AashrayaRau on Telegram.
 Sovrn Protocol is implemented by the [Sovrn platform](https://sovrn.place), which additionally provides:
 
 - Zone administration and application management
@@ -62,7 +63,6 @@ Sovrn Protocol is implemented by the [Sovrn platform](https://sovrn.place), whic
 - Federation onboarding for new zones
 - Immutable audit trail with on-chain credential storage
 
-Sovrn [Demo](https://sovrn-demo.vercel.app/), access password please message @aashrayarau on TG.
 For platform access or zone partnership inquiries: **contactus@sovrnplace.com**
 
 ## Links
