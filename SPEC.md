@@ -118,7 +118,7 @@ Tiered types (`KYC_*`) map to FATF-aligned verification depth. Non-tiered types 
 
 ### 2.3 Proof format
 
-v0.1 credentials use `DataIntegrityProof` with cryptosuite `eddsa-rdfc-2022` (VC Data Integrity). `Ed25519Signature2020` is accepted for backwards compatibility but is considered legacy.
+v0.1 credentials use `DataIntegrityProof` with cryptosuite `eddsa-rdfc-2022` (VC Data Integrity). `Ed25519Signature2020` is accepted for backwards compatibility but is considered legacy and will be removed in v1.0.
 
 ### 2.4 Full example
 
@@ -221,6 +221,7 @@ type KycAdapterErrorCode =
   | 'TIER_NOT_SUPPORTED'
   | 'RATE_LIMITED'
   | 'MALFORMED_PAYLOAD'
+  | 'NOT_SUPPORTED'             // operation not supported by this adapter
 ```
 
 ### 3.1 Compatible providers
@@ -231,7 +232,7 @@ Both open-source and commercial providers emit W3C VC 2.0 credentials with ident
 
 ### 3.2 Implementation requirements
 
-Adapters MUST be pure translation layers. They MUST NOT modify the credential schema, invent new credential types, or bypass hash computation. Adapters MAY omit methods only for operations the underlying provider does not support (e.g., an adapter with no webhook delivery MUST still throw `INVALID_WEBHOOK_SIGNATURE` if `handleWebhook` is called).
+Adapters MUST be pure translation layers. They MUST NOT modify the credential schema, invent new credential types, or bypass hash computation. Adapters MAY omit methods only for operations the underlying provider does not support (e.g., an adapter with no webhook delivery MUST throw `NOT_SUPPORTED` if `handleWebhook` is called, rather than silently succeeding).
 
 ---
 
