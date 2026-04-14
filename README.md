@@ -10,7 +10,7 @@ Sovrn Protocol defines how identity credentials are issued, verified, and ported
 
 ## Scope
 
-Economic zones, free ports, and smart cities are the fastest-growing governance structures in the world - yet they have no shared identity infrastructure. A resident verified in one zone starts from scratch in another. A company incorporated in Lagos cannot present those credentials in Colombo. Every zone builds its own siloed onboarding, its own KYC, its own credential format.
+Economic zones, free ports, and smart cities are the fastest-growing governance structures in the world - yet they have no shared identity infrastructure. A resident verified in one zone starts from scratch in another. A company incorporated in Estonia cannot present those credentials in Dubai. Every zone builds its own siloed onboarding, its own KYC, its own credential format.
 
 Sovrn Protocol is the identity and credential layer that connects them.
 
