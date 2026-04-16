@@ -53,7 +53,7 @@ Security issues: email **contactus@sovrnplace.com**. Do not open public issues f
 
 ## Platform
 
-**Demo:** [Link](https://sovrn-demo.vercel.app) - access password, message @AashrayaRau on Telegram.
+**Demo:** [Link](https://sovrn-demo.vercel.app) - for access password, message @AashrayaRau on Telegram.
 
 Sovrn Protocol is implemented by the [Sovrn platform](https://sovrn.place), which additionally provides:
 
