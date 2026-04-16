@@ -13,7 +13,7 @@ Economic zones, free ports, and smart cities are the fastest-growing governance 
 ## What this defines
 
 - **`did:sovrn:` method and the `.si` namespace** - a decentralized identifier purpose-built for multi-zone identity
-- **Credential schemas (W3C VC 2.0)** - standardized formats for KYC verification, residency, incorporation, tax compliance, and payment history, canonicalized with [JCS (RFC 8785)](https://datatracker.ietf.org/doc/html/rfc8785) and hashed with SHA-256
+- **Credential schemas (W3C VC 2.0)** - standardized formats for KYC verification, residency, incorporation, tax compliance, and payment confirmation, canonicalized with [JCS (RFC 8785)](https://datatracker.ietf.org/doc/html/rfc8785) and hashed with SHA-256
 - **`KycAdapter` interface** - a provider-agnostic contract any verification provider can implement
 - **Cross-zone presentation format** - how credentials move between independent zones with explicit user consent
 - **Reputation schema** - five-dimension portable reputation with standardized tiers
@@ -31,10 +31,10 @@ Both open-source and commercial providers emit identical W3C VC 2.0 credentials.
 
 ```
 /SPEC.md       Full normative specification
-/schemas       W3C VC 2.0 credential JSON-LD schemas             (forthcoming)
-/adapters      KycAdapter interface and reference implementations  (forthcoming)
-/examples      Example credentials, presentations, adapters       (forthcoming)
-/docs          Additional specification documents                 (forthcoming)
+/schemas       W3C VC 2.0 credential JSON-LD schemas                (forthcoming)
+/adapters      KycAdapter interface and reference implementations   (forthcoming)
+/examples      Example credentials, presentations, adapters         (forthcoming)
+/docs          Additional specification documents                   (forthcoming)
 ```
 
 Directories marked *forthcoming* will be populated as components are extracted and published.
@@ -49,7 +49,7 @@ Maintained by [Sovrn](https://sovrn.place). Schema changes go through an RFC pro
 
 ## Security
 
-Security issues: email **contactus@sovrnplace.com**. Do not open public issues for vulnerabilities.
+Security issues: email **contactus@sovrnplace.com**. Do not open public issues for vulnerabilities. Responsible disclosure reports receive acknowledgement within 72 hours.
 
 ## Platform
 

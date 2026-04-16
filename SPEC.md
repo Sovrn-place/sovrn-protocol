@@ -215,12 +215,12 @@ class KycAdapterError extends Error {
 }
 
 type KycAdapterErrorCode =
-  | 'PROVIDER_UNAVAILABLE'
-  | 'INVALID_SESSION'
-  | 'INVALID_WEBHOOK_SIGNATURE'
-  | 'TIER_NOT_SUPPORTED'
-  | 'RATE_LIMITED'
-  | 'MALFORMED_PAYLOAD'
+  | 'PROVIDER_UNAVAILABLE'      // upstream provider is down or unreachable
+  | 'INVALID_SESSION'           // session not found, expired, or belongs to another user
+  | 'INVALID_WEBHOOK_SIGNATURE' // webhook payload failed signature verification
+  | 'TIER_NOT_SUPPORTED'        // requested tier exceeds this adapter's maxTier
+  | 'RATE_LIMITED'              // provider rate limit hit; retry after delay
+  | 'MALFORMED_PAYLOAD'         // webhook or session payload could not be parsed
   | 'NOT_SUPPORTED'             // operation not supported by this adapter
 ```
 
@@ -340,10 +340,10 @@ The protocol defines the wire format for portable reputation scores.
 | [W3C DID Core](https://www.w3.org/TR/did-core/) | DID method framing | Implemented |
 | [W3C VC Data Integrity](https://www.w3.org/TR/vc-data-integrity/) | Proof format (`eddsa-rdfc-2022`) | Implemented |
 | [JCS (RFC 8785)](https://datatracker.ietf.org/doc/html/rfc8785) | Canonicalization for hashing | Implemented |
-| [OID4VCI 1.0](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) | Credential issuance | Planned (2026) |
-| [OID4VP 1.0](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) | Credential presentation | Planned (2026) |
-| [ISO 18013-5](https://www.iso.org/standard/69084.html) | Mobile document format (mdoc) | Planned |
-| [EUDI Wallet](https://digital-strategy.ec.europa.eu/en/policies/eudi-wallet-toolbox) | Compatibility target | Planned (Dec 2026) |
+| [OID4VCI 1.0](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) | Credential issuance | Planned — v0.2 |
+| [OID4VP 1.0](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) | Credential presentation | Planned — v0.2 |
+| [ISO 18013-5](https://www.iso.org/standard/69084.html) | Mobile document format (mdoc) | Planned — v0.2 |
+| [EUDI Wallet](https://digital-strategy.ec.europa.eu/en/policies/eudi-wallet-toolbox) | Compatibility target | Planned — v0.2 |
 | [FATF Recommendations](https://www.fatf-gafi.org/en/recommendations.html) | Framing for tiered KYC depth | Implemented |
 
 ---
