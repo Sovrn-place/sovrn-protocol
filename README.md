@@ -4,7 +4,7 @@
 
 Economic zones, free ports, and smart cities are the fastest-growing governance structures in the world, yet they have no shared identity infrastructure. A resident verified in one zone starts from scratch in another. A company incorporated in Dubai cannot present those credentials in Colombo. Every zone builds its own siloed onboarding, its own KYC, its own credential format.
 
-**Sovrn Protocol is the identity and credential layer that connects them.** A KYC verification completed in one zone can be recognized by another without re-verification, while preserving user consent, privacy, and regulatory sovereignty.
+Sovrn Protocol is the identity and credential layer that connects them. A KYC verification completed in one zone can be recognized by another without re-verification, while preserving user consent, privacy, and regulatory sovereignty.
 
 > **Full specification:** [SPEC.md](./SPEC.md)
 
