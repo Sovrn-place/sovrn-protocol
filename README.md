@@ -12,20 +12,16 @@ Sovrn Protocol is the identity and credential layer that connects them. A KYC ve
 
 ## What this defines
 
-- **`did:sovrn:` method and the `.si` namespace** - a decentralized identifier purpose-built for multi-zone identity
+- **`did:sovrn:` method and the `.si` namespace** - a decentralized identifier purpose-built for multi-zone identity. The method specification is in active development for W3C registration.
 - **Credential schemas (W3C VC 2.0)** - standardized formats for KYC verification, residency, incorporation, tax compliance, and payment confirmation, canonicalized with [JCS (RFC 8785)](https://datatracker.ietf.org/doc/html/rfc8785) and hashed with SHA-256
 - **`KycAdapter` interface** - a provider-agnostic contract any verification provider can implement
 - **Cross-zone presentation format** - how credentials move between independent zones with explicit user consent
-- **Reputation schema** - five-dimension portable reputation with standardized tiers
+- **Reputation schema** - portable reputation that travels with the credential holder across zones
 - **On-chain credential storage** (planned) - SHA-256 credential hashes stored on-chain for tamper-evident verification
 
 ## Compatible providers
 
-Any provider implementing the [`KycAdapter`](./SPEC.md#3-kycadapter-interface) interface. Planned reference adapters for:
-
-Privado ID · Holonym / Human ID · zkPassport · Anon Aadhaar · Sumsub · Persona
-
-Both open-source and commercial providers emit identical W3C VC 2.0 credentials. A credential issued via any compliant adapter is indistinguishable from any other at the protocol layer.
+Any provider implementing the [`KycAdapter`](./SPEC.md#3-kycadapter-interface) interface. Both open-source and licensed verification providers emit identical W3C VC 2.0 credentials, so a credential issued via any compliant adapter is indistinguishable at the protocol layer.
 
 ## Repository structure
 
@@ -60,7 +56,7 @@ Sovrn Protocol is implemented by the [Sovrn platform](https://sovrn.place), whic
 - Zone administration and application management
 - AI-assisted compliance review
 - Programmable escrow and multi-currency settlement
-- Reputation scoring across five dimensions
+- Portable reputation that travels with credential holders across zones
 - Federation onboarding for new zones
 - Immutable audit trail with on-chain credential storage
 

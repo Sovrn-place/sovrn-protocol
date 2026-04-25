@@ -31,7 +31,7 @@ The Universal ID is the identity anchor in Sovrn Protocol. Every credential, rep
 A `did:sovrn:{uuid}` resolves to an identity anchor containing:
 
 - `.si` name
-- Identity level - one of `LIGHT`, `UNIVERSAL_ID`, `VERIFIED`
+- Identity assurance level (progressive, based on verification depth)
 - Active credential types and issuing zones (never raw credential data)
 - Reputation score and tier
 - SHA-256 identity hash
@@ -68,9 +68,9 @@ Resolution of `did:sovrn:{uuid}` in v0.1 is performed via the federation registr
   }],
   "sovrnMetadata": {
     "siName": "alex.si",
-    "level": "VERIFIED",
+    "level": 3,
     "credentialCount": 3,
-    "reputationTier": "Pioneer",
+    "reputationTier": "tier-2",
     "identityHash": "sha256:a3f8c1..."
   }
 }
@@ -129,21 +129,21 @@ v0.1 credentials use `DataIntegrityProof` with cryptosuite `eddsa-rdfc-2022` (VC
     "https://sovrn.place/ns/credentials/v1"
   ],
   "type": ["VerifiableCredential", "SovrnIdentityCredential"],
-  "issuer": "did:sovrn:itana-ng",
+  "issuer": "did:sovrn:example-zone",
   "validFrom": "2026-03-14T09:12:00Z",
   "validUntil": "2028-03-14T09:12:00Z",
   "credentialSubject": {
     "id": "did:sovrn:a1b2c3d4-e5f6-4890-abcd-ef1234567890",
     "type": "KYC_ENHANCED",
     "level": 2,
-    "issuingZone": "itana-ng",
+    "issuingZone": "example-zone",
     "hash": "sha256:a3f8c1e9b2d4..."
   },
   "proof": {
     "type": "DataIntegrityProof",
     "cryptosuite": "eddsa-rdfc-2022",
     "created": "2026-03-14T09:12:00Z",
-    "verificationMethod": "did:sovrn:itana-ng#key-1",
+    "verificationMethod": "did:sovrn:example-zone#key-1",
     "proofPurpose": "assertionMethod",
     "proofValue": "z58..."
   }
@@ -224,11 +224,11 @@ type KycAdapterErrorCode =
   | 'NOT_SUPPORTED'             // operation not supported by this adapter
 ```
 
-### 3.1 Compatible providers
+### 3.1 Provider compatibility
 
-Compatible identity providers include Privado ID, Holonym / Human ID, zkPassport, Anon Aadhaar, Sumsub, Persona, and any other provider that implements the `KycAdapter` interface.
+The adapter pattern exists because verification is not a single market. Some zones require licensed KYC providers with regulatory coverage in specific jurisdictions. Others prefer open-source, zero-knowledge approaches that minimize data collection. The protocol does not preference either model - it defines the contract both must satisfy.
 
-Both open-source and commercial providers emit W3C VC 2.0 credentials with identical schema and hash semantics. A credential issued via any compliant adapter is indistinguishable from any other at the protocol layer.
+Any provider that implements the `KycAdapter` interface can issue credentials conforming to Sovrn Protocol. Both open-source and licensed providers emit W3C VC 2.0 credentials with identical schema and hash semantics. A credential issued via any compliant adapter is indistinguishable from any other at the protocol layer.
 
 ### 3.2 Implementation requirements
 
@@ -258,7 +258,7 @@ interface CredentialPresentation {
   /** Attached reputation (if consented) */
   reputation?: {
     total: number                   // 0-100
-    tier: 'Explorer' | 'Pioneer' | 'Ambassador' | 'Sovereign'
+    tier: string
     zoneCount: number
     computedAt: string              // ISO 8601
     hash: string                    // sha256:...
@@ -311,24 +311,13 @@ When a user presents credentials from Zone A to Zone B:
 
 The protocol defines the wire format for portable reputation scores.
 
-### 6.1 Dimensions (each 0-20, total 0-100)
+### 6.1 What reputation captures
 
-| Dimension | What it measures |
-|-----------|-----------------|
-| `tenure` | Time holding a .si identity and active participation |
-| `financial` | Payment history, escrow completion, refund rate |
-| `compliance` | KYC tier achieved, cross-check results, sanctions status |
-| `crossZone` | Breadth of credentials across distinct zones |
-| `engagement` | Application completion rate, document quality, responsiveness |
+Reputation is a portable verifiable credential that summarizes a holder's track record across zones. It aggregates signals from real interactions - verification depth, payment behavior, credential breadth, time in good standing - into a single score (0-100) that travels with the holder. The score is computed by the issuing zone and signed like any other credential; receiving zones can verify authenticity without needing access to the underlying activity data.
 
 ### 6.2 Tiers
 
-| Tier | Range |
-|------|-------|
-| Explorer | 0-24 |
-| Pioneer | 25-49 |
-| Ambassador | 50-74 |
-| Sovereign | 75-100 |
+Tier labels accompany the numeric score for cross-zone presentation. Receiving zones often need a fast read of where a holder stands without recomputing the score themselves. The protocol carries tier as a string and leaves tier systems to the issuing platform.
 
 ---
 
@@ -340,10 +329,10 @@ The protocol defines the wire format for portable reputation scores.
 | [W3C DID Core](https://www.w3.org/TR/did-core/) | DID method framing | Implemented |
 | [W3C VC Data Integrity](https://www.w3.org/TR/vc-data-integrity/) | Proof format (`eddsa-rdfc-2022`) | Implemented |
 | [JCS (RFC 8785)](https://datatracker.ietf.org/doc/html/rfc8785) | Canonicalization for hashing | Implemented |
-| [OID4VCI 1.0](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) | Credential issuance | Planned — v0.2 |
-| [OID4VP 1.0](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) | Credential presentation | Planned — v0.2 |
-| [ISO 18013-5](https://www.iso.org/standard/69084.html) | Mobile document format (mdoc) | Planned — v0.2 |
-| [EUDI Wallet](https://digital-strategy.ec.europa.eu/en/policies/eudi-wallet-toolbox) | Compatibility target | Planned — v0.2 |
+| [OID4VCI 1.0](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) | Credential issuance | Planned - v0.2 |
+| [OID4VP 1.0](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) | Credential presentation | Planned - v0.2 |
+| [ISO 18013-5](https://www.iso.org/standard/69084.html) | Mobile document format (mdoc) | Planned - v0.2 |
+| [EUDI Wallet](https://digital-strategy.ec.europa.eu/en/policies/eudi-wallet-toolbox) | Compatibility target | Planned - v0.2 |
 | [FATF Recommendations](https://www.fatf-gafi.org/en/recommendations.html) | Framing for tiered KYC depth | Implemented |
 
 ---
